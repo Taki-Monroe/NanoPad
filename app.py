@@ -1,13 +1,13 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect
 import os
 import uuid
+import redis
 
 app = Flask(__name__)
-NOTES_DIR = 'notes'
 
-# Create notes directory if it doesn't exist
-if not os.path.exists(NOTES_DIR):
-    os.makedirs(NOTES_DIR)
+# Configure Redis
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_client = redis.from_url(redis_url)
 
 @app.route('/')
 def index():
@@ -21,23 +21,15 @@ def get_note(note_id):
 
 @app.route('/api/note/<note_id>', methods=['GET'])
 def load_note(note_id):
-    file_path = os.path.join(NOTES_DIR, f"{note_id}.txt")
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        return jsonify({'content': content})
-    except FileNotFoundError:
-        return jsonify({'content': ''})
+    content = redis_client.get(f"note:{note_id}")
+    return jsonify({'content': content.decode('utf-8') if content else ''})
 
 @app.route('/api/note/<note_id>', methods=['POST'])
 def save_note(note_id):
     content = request.json.get('content', '')
-    file_path = os.path.join(NOTES_DIR, f"{note_id}.txt")
-    
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
+    redis_client.set(f"note:{note_id}", content)
     return jsonify({'success': True})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
