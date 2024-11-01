@@ -1,4 +1,4 @@
-# Real-time Collaborative Notepad
+# NanoPad: Your Instant Shared Notebook
 
 A lightweight, real-time notepad application built with Python Flask that allows instant note sharing and collaboration.
 
